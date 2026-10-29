@@ -1,0 +1,35 @@
+{
+  "name": "nexocena-studio",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "workspaces": [
+    "apps/*",
+    "packages/*"
+  ],
+  "engines": {
+    "node": ">=24"
+  },
+  "scripts": {
+    "dev": "concurrently -k 'npm run dev -w apps/api' 'npm run dev -w apps/web'",
+    "build": "npm run build -w apps/web",
+    "typecheck": "tsc --noEmit && npm run typecheck -w apps/web",
+    "test": "node --import tsx --test tests/*.test.ts",
+    "android:sync": "npm run build && cd apps/android && npx cap sync android",
+    "test:e2e": "playwright test"
+  },
+  "dependencies": {
+    "@fastify/cookie": "^11.0.2",
+    "@fastify/multipart": "^9.3.0",
+    "@fastify/rate-limit": "^10.3.0",
+    "fastify": "^5.12.7",
+    "zod": "^4.0.0"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.64.1",
+    "@types/node": "^24.0.0",
+    "concurrently": "^9.0.0",
+    "tsx": "^4.20.0",
+    "typescript": "^5.9.0"
+  }
+}

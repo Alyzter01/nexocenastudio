@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">NEXOCENA STUDIO</string>
+    <string name="title_activity_main">NEXOCENA STUDIO</string>
+    <string name="package_name">com.nexocena.studio</string>
+    <string name="custom_url_scheme">com.nexocena.studio</string>
+</resources>
