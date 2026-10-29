@@ -1,5 +1,7 @@
 # NEXOCENA STUDIO — prontidão para implantação privada
 
+> Na branch develop/free-hosting-supabase, a arquitetura atual usa PostgreSQL/Supabase Storage e Render Free. Este documento contém contexto histórico; a referência de implantação atual é [FREE_HOSTING_SUPABASE.md](FREE_HOSTING_SUPABASE.md) e a evidência atual está em [FREE_HOSTING_REPORT.md](FREE_HOSTING_REPORT.md).
+
 **Classificação: APROVADO PARA HOMOLOGAÇÃO.** Testes locais e simulados atendidos; não há evidência suficiente para aprovar implantação privada ou produção real. Não recomendar merge baseado apenas neste relatório: CI remoto, revisão e verificações operacionais permanecem pendentes.
 
 Escopo: branch `develop/web-runway-gen45`, base auditada `b42c9519603b37b9d493333bd961428db7781f97`, PR informado pelo proprietário: https://github.com/Alyzter01/nexocenastudio/pull/2. Somente web responsiva, sem Android/Capacitor/APK. Nenhum dado existente foi excluído, nenhuma migração de banco foi feita, nenhuma conta administrativa real foi criada e nenhuma geração paga foi executada.

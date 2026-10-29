@@ -1,5 +1,7 @@
 # Geração de vídeo — Runway
 
+> Na branch develop/free-hosting-supabase, a arquitetura atual usa PostgreSQL/Supabase Storage e Render Free. Este documento contém contexto histórico; a referência de implantação atual é [FREE_HOSTING_SUPABASE.md](FREE_HOSTING_SUPABASE.md) e a evidência atual está em [FREE_HOSTING_REPORT.md](FREE_HOSTING_REPORT.md).
+
 ## Escolha e contrato
 
 Integração oficial com Runway Gen-4.5, sem Google Flow, cookies de navegador ou endpoints privados. Contrato conferido no SDK oficial TypeScript:

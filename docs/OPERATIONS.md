@@ -1,5 +1,7 @@
 # Operação e limites
 
+> Na branch develop/free-hosting-supabase, a arquitetura atual usa PostgreSQL/Supabase Storage e Render Free. Este documento contém contexto histórico; a referência de implantação atual é [FREE_HOSTING_SUPABASE.md](FREE_HOSTING_SUPABASE.md) e a evidência atual está em [FREE_HOSTING_REPORT.md](FREE_HOSTING_REPORT.md).
+
 ## Desenvolvimento
 
 Cada tarefa já é isolada: use o checkout existente, sem criar worktree. Node 24, npm ci, npm run dev. Persistência real em SQLite com WAL e mídia no disco privado. Não há dependência de IA ou conta externa para o fluxo manual.

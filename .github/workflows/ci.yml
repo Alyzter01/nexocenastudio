@@ -5,6 +5,21 @@ permissions:
 jobs:
   validate:
     runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:17
+        env:
+          POSTGRES_PASSWORD: fixture-only
+          POSTGRES_DB: nexocena_ci_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+    env:
+      TEST_DATABASE_URL: postgresql://postgres:fixture-only@127.0.0.1:5432/nexocena_ci_test
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -13,6 +28,14 @@ jobs:
           cache: npm
       - run: npm ci
       - run: npm run typecheck
+      - run: node scripts/init-test-postgres.mjs
+        env:
+          NODE_ENV: test
+      - run: npm run db:migrate
+        env:
+          NODE_ENV: test
+          DATABASE_SSL: "false"
+          DATABASE_URL: postgresql://postgres:fixture-only@127.0.0.1:5432/nexocena_ci_test
       - run: npm test
       - run: npx playwright install --with-deps chromium
       - run: npm run test:e2e

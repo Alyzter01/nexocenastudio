@@ -1,5 +1,7 @@
 # Implantação privada — procedimento, ainda não executado
 
+> Na branch develop/free-hosting-supabase, a arquitetura atual usa PostgreSQL/Supabase Storage e Render Free. Este documento contém contexto histórico; a referência de implantação atual é [FREE_HOSTING_SUPABASE.md](FREE_HOSTING_SUPABASE.md) e a evidência atual está em [FREE_HOSTING_REPORT.md](FREE_HOSTING_REPORT.md).
+
 ## Arquitetura e limites
 
 Navegador mobile/desktop → frontend Vercel (HTTPS) → rewrite `/api/:path*` → Fastify persistente (HTTPS) → SQLite WAL e diretório de mídias em **um volume durável**, uma instância de API. A Runway é chamada somente pelo backend. Não migrar o banco atual nem usar o disco temporário de funções serverless para dados. Um serviço pago Render com persistent disk ou uma VM com disco e backup pode executar este processo; a escolha exige confirmar limites e preços atuais. Plano gratuito sem disco durável não atende. Docker não é necessário para a preparação atual.

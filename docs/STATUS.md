@@ -1,5 +1,7 @@
 # Estado da implementação
 
+> Na branch develop/free-hosting-supabase, a arquitetura atual usa PostgreSQL/Supabase Storage e Render Free. Este documento contém contexto histórico; a referência de implantação atual é [FREE_HOSTING_SUPABASE.md](FREE_HOSTING_SUPABASE.md) e a evidência atual está em [FREE_HOSTING_REPORT.md](FREE_HOSTING_REPORT.md).
+
 ## Escopo atual: somente site
 
 - Web responsiva para celular e computador, com navegação mobile e desktop.

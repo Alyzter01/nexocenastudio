@@ -1,0 +1,38 @@
+# Prepared only. Do not apply/publish without explicit final authorization.
+services:
+  - type: web
+    name: nexocenastudio-api
+    runtime: node
+    plan: free
+    branch: develop/free-hosting-supabase
+    autoDeployTrigger: "off"
+    buildCommand: npm ci && npm run build:api
+    startCommand: npm run start:api
+    healthCheckPath: /api/health
+    envVars:
+      - key: NODE_VERSION
+        value: 24.19.0
+      - key: NODE_ENV
+        value: production
+      - key: ACCESS_MODE
+        value: private
+      - key: PRIVATE_OWNER_EMAIL
+        value: mkprod.60@gmail.com
+      - key: REGISTRATION_ENABLED
+        value: "false"
+      - key: APP_ORIGIN
+        value: https://nexocenastudio.vercel.app
+      - key: RUNWAY_GENERATION_ENABLED
+        value: "false"
+      - key: RUNWAY_DAILY_CREDIT_LIMIT
+        value: "0"
+      - key: DB_POOL_MAX
+        value: "2"
+      - key: DATABASE_URL
+        sync: false
+      - key: SUPABASE_URL
+        value: https://kdwtbefpbcyendvtuufb.supabase.co
+      - key: SUPABASE_STORAGE_BUCKET
+        value: nexocena-media
+      - key: SUPABASE_SECRET_KEY
+        sync: false
