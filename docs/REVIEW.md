@@ -1,5 +1,7 @@
 # Revisão para Pull Request — web responsiva e Runway Gen-4.5
 
+> Registro histórico da preparação do commit b42c951. Para a auditoria e os resultados atuais, consulte [PRODUCTION_READINESS.md](PRODUCTION_READINESS.md). A lista abaixo corresponde àquela revisão inicial.
+
 Base comparada: `main` / `6ed2412d2b0ad16ffce821a4dd2ee54c6c79bf15`.
 
 ## Resultado

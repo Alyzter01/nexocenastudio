@@ -12,10 +12,14 @@
   },
   "scripts": {
     "dev": "concurrently -k 'npm run dev -w apps/api' 'npm run dev -w apps/web'",
-    "build": "npm run build -w apps/web",
+    "build": "npm run build:api && npm run build -w apps/web",
     "typecheck": "tsc --noEmit && npm run typecheck -w apps/web",
     "test": "node --import tsx --test tests/*.test.ts",
-    "test:e2e": "playwright test"
+    "test:e2e": "playwright test",
+    "build:api": "tsc -p tsconfig.api.json",
+    "start:api": "node dist/server/apps/api/src/index.js",
+    "create:owner": "node --import tsx scripts/create-user.ts",
+    "backup": "node --import tsx scripts/backup.ts"
   },
   "dependencies": {
     "@fastify/cookie": "^11.0.2",

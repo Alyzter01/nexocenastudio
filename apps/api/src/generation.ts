@@ -4,8 +4,9 @@ import {randomUUID} from 'node:crypto';
 import {open,unlink} from 'node:fs/promises';
 import {join} from 'node:path';
 import {z} from 'zod';
+import {publicOutputUrl,type ResolveHost} from './security.js';
 import {ProviderError,videoInput,type VideoProvider} from '../../../packages/ai-providers/src/runway.js';
-export function registerGeneration(app:FastifyInstance,db:DatabaseSync,provider:VideoProvider,directory:string){
+export function registerGeneration(app:FastifyInstance,db:DatabaseSync,provider:VideoProvider,directory:string,env:NodeJS.ProcessEnv=process.env,downloads:{request?:typeof fetch;resolve?:ResolveHost}={}){
  db.exec(`CREATE TABLE IF NOT EXISTS video_quotes(id TEXT PRIMARY KEY,user_id TEXT NOT NULL,project_id TEXT NOT NULL,scene_id TEXT NOT NULL,input TEXT NOT NULL,credits REAL NOT NULL,expires INTEGER NOT NULL);
  CREATE TABLE IF NOT EXISTS video_jobs(id TEXT PRIMARY KEY,user_id TEXT NOT NULL,quote_id TEXT UNIQUE NOT NULL,project_id TEXT NOT NULL,scene_id TEXT NOT NULL,status TEXT NOT NULL,task_id TEXT,output TEXT,media_id TEXT,error TEXT,last_poll INTEGER NOT NULL DEFAULT 0,created_at TEXT NOT NULL);`);
  const uid=(req:unknown)=>(req as {userId:string}).userId;
@@ -29,10 +30,19 @@ export function registerGeneration(app:FastifyInstance,db:DatabaseSync,provider:
   const project=db.prepare('SELECT data FROM projects WHERE id=? AND user_id=?').get(quote.project_id!,uid(req));if(!project)return reply.code(404).send({error:'Projeto não encontrado'});
   const data=JSON.parse(String(project.data));const scene=data.scenes.find((s:{id:string})=>s.id===quote.scene_id);
   if(!scene||JSON.stringify({prompt:scene.prompt.trim(),duration:scene.duration,ratio:data.ratio})!==String(quote.input))return reply.code(409).send({error:'Cena alterada. Solicite uma nova estimativa.'});
-  const active=db.prepare("SELECT scene_id FROM video_jobs WHERE user_id=? AND status IN ('SUBMITTING','UNKNOWN','PENDING','RUNNING','THROTTLED')").all(uid(req));
-  if(active.length>=2||active.some(j=>j.scene_id===quote.scene_id))return reply.code(409).send({error:'Já existe geração ativa ou envio incerto. Aguarde e consulte as tarefas.'});
-  if(Number(quote.credits)!==videoInput.parse(JSON.parse(String(quote.input))).duration*provider.creditsPerSecond)return reply.code(409).send({error:'Tarifa alterada. Solicite uma nova estimativa.'});
-  const id=randomUUID();db.prepare('INSERT INTO video_jobs(id,user_id,quote_id,project_id,scene_id,status,created_at) VALUES(?,?,?,?,?,?,?)').run(id,uid(req),quoteId,quote.project_id!,quote.scene_id!,'SUBMITTING',new Date().toISOString());
+  const limit=Number(env.RUNWAY_DAILY_CREDIT_LIMIT);
+  if(!Number.isFinite(limit)||limit<=0)return reply.code(503).send({error:'Defina um teto de créditos de vídeo para 24 horas no backend antes de habilitar geração.'});
+  const id=randomUUID();
+  db.exec('BEGIN IMMEDIATE');
+  try{
+   const active=db.prepare("SELECT scene_id FROM video_jobs WHERE user_id=? AND status IN ('SUBMITTING','UNKNOWN','PENDING','RUNNING','THROTTLED')").all(uid(req));
+   if(active.length>=2||active.some(j=>j.scene_id===quote.scene_id)){db.exec('ROLLBACK');return reply.code(409).send({error:'Já existe geração ativa ou envio incerto. Aguarde e consulte as tarefas.'});}
+   if(Number(quote.credits)!==videoInput.parse(JSON.parse(String(quote.input))).duration*provider.creditsPerSecond){db.exec('ROLLBACK');return reply.code(409).send({error:'Tarifa alterada. Solicite uma nova estimativa.'});}
+   const reserved=db.prepare('SELECT COALESCE(SUM(q.credits),0) AS credits FROM video_jobs j JOIN video_quotes q ON q.id=j.quote_id WHERE j.created_at>=?').get(new Date(Date.now()-86400000).toISOString());
+   if(Number(reserved!.credits)+Number(quote.credits)>limit){db.exec('ROLLBACK');return reply.code(409).send({error:'Teto global de créditos reservado nas últimas 24 horas atingido. Nenhum envio realizado.'});}
+   db.prepare('INSERT INTO video_jobs(id,user_id,quote_id,project_id,scene_id,status,created_at) VALUES(?,?,?,?,?,?,?)').run(id,uid(req),quoteId,quote.project_id!,quote.scene_id!,'SUBMITTING',new Date().toISOString());
+   db.exec('COMMIT');
+  }catch(e){db.exec('ROLLBACK');throw e;}
   try{const task=await provider.submit(videoInput.parse(JSON.parse(String(quote.input))));db.prepare('UPDATE video_jobs SET task_id=?,status=? WHERE id=?').run(task.id,'PENDING',id);}catch(e){const ambiguous=!(e instanceof ProviderError)||e.ambiguous;db.prepare('UPDATE video_jobs SET status=?,error=? WHERE id=?').run(ambiguous?'UNKNOWN':'FAILED',ambiguous?'Envio incerto. Não reenvie: confira o painel Runway.':'Provedor recusou o envio. Confira saldo e acesso.',id);}
   return reply.code(202).send(visible(db.prepare('SELECT * FROM video_jobs WHERE id=?').get(id)!));
  });
@@ -52,16 +62,19 @@ export function registerGeneration(app:FastifyInstance,db:DatabaseSync,provider:
   const id=(req.params as {id:string}).id;const row=db.prepare('SELECT * FROM video_jobs WHERE id=? AND user_id=?').get(id,uid(req));if(!row)return reply.code(404).send({error:'Tarefa não encontrada'});if(row.media_id)return {mediaId:row.media_id};
   if(row.status!=='SUCCEEDED')return reply.code(409).send({error:'Geração ainda não concluída'});
   if(locks.has(id))return reply.code(409).send({error:'Importação em andamento'});
-  const outputs=z.array(z.url()).parse(JSON.parse(String(row.output||'[]')));const url=outputs[0]?new URL(outputs[0]):null;
-  const hosts=(process.env.RUNWAY_OUTPUT_HOSTS||'').split(',').map(x=>x.trim()).filter(Boolean);
-  if(!url||url.protocol!=='https:'||url.username||url.password||url.port||!hosts.includes(url.hostname))return reply.code(503).send({error:'Configure RUNWAY_OUTPUT_HOSTS com o hostname HTTPS de saída autorizado pelo provedor e libere-o na rede.'});
+  const outputs=z.array(z.url()).parse(JSON.parse(String(row.output||'[]')));
+  const hosts=(env.RUNWAY_OUTPUT_HOSTS||'').split(',').map(x=>x.trim()).filter(Boolean);
+  let url:URL;try{url=await publicOutputUrl(outputs[0]||'',hosts,downloads.resolve);}catch{return reply.code(503).send({error:'URL de vídeo não autorizada ou DNS indisponível. Configure somente hosts públicos oficiais de saída.'});}
+  // A resolução DNS é assíncrona: outra importação pode ter terminado enquanto isso.
+  const current=db.prepare('SELECT media_id FROM video_jobs WHERE id=?').get(id);if(current?.media_id)return {mediaId:current.media_id};
+  if(locks.has(id))return reply.code(409).send({error:'Importação em andamento'});
   locks.add(id);const mediaId=randomUUID();const path=join(directory,'media',mediaId);
   try{
-   const response=await fetch(url,{redirect:'error',signal:AbortSignal.timeout(60000)});if(!response.ok||!response.body)throw new Error();
-   const file=await open(path,'wx');let size=0;let header=Buffer.alloc(0);
+   const response=await (downloads.request||fetch)(url,{redirect:'error',signal:AbortSignal.timeout(60000)});if(!response.ok||!response.body)throw new Error();
+   const file=await open(path,'wx',0o600);let size=0;let header=Buffer.alloc(0);
    try{for await(const chunk of response.body){size+=chunk.length;if(size>100*1024*1024)throw new Error();if(header.length<12)header=Buffer.concat([header,chunk]).subarray(0,12);await file.writeFile(chunk);}}finally{await file.close();}
    if(header.toString('ascii',4,8)!=='ftyp')throw new Error();
-   db.prepare('INSERT INTO media VALUES(?,?,?,?,?,?)').run(mediaId,uid(req),`runway-${id}.mp4`,'video/mp4',size,new Date().toISOString());db.prepare('UPDATE video_jobs SET media_id=? WHERE id=?').run(mediaId,id);return {mediaId};
+   db.exec('BEGIN IMMEDIATE');try{db.prepare('INSERT INTO media VALUES(?,?,?,?,?,?)').run(mediaId,uid(req),`runway-${id}.mp4`,'video/mp4',size,new Date().toISOString());db.prepare('UPDATE video_jobs SET media_id=? WHERE id=?').run(mediaId,id);db.exec('COMMIT');}catch(e){db.exec('ROLLBACK');throw e;}return {mediaId};
   }catch{await unlink(path).catch(()=>{});return reply.code(502).send({error:'Não foi possível preservar o MP4. Verifique rede, validade do resultado e limite de 100 MB. Nenhuma nova geração foi enviada.'});}finally{locks.delete(id);}
  });
 }

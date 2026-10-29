@@ -5,14 +5,14 @@ import {tmpdir} from 'node:os';
 import {join} from 'node:path';
 import {createApp} from '../apps/api/src/server.js';
 import {ProviderError,runwayProvider,type VideoProvider} from '../packages/ai-providers/src/runway.js';
-process.env.NODE_ENV='test';
+process.env.NODE_ENV='test';process.env.ACCESS_MODE='multiuser';process.env.REGISTRATION_ENABLED='true';process.env.RUNWAY_DAILY_CREDIT_LIMIT='1000';
 // Provedor explicitamente simulado: estes testes nunca fazem geração paga.
 test('Runway: payload oficial, timeout/erros ambíguos e ausência de reenvio',async()=>{
  let calls=0;
- const provider=runwayProvider({RUNWAYML_API_SECRET:'fixture-only',RUNWAY_CREDITS_PER_SECOND:'12'},async(url,options)=>{calls++;assert.equal(url,'https://api.dev.runwayml.com/v1/text_to_video');const body=JSON.parse(String(options?.body));assert.deepEqual(body,{model:'gen4.5',promptText:'Uma cidade ao amanhecer',duration:6,ratio:'720:1280'});assert.equal((options?.headers as Record<string,string>)['X-Runway-Version'],'2024-11-06');return Response.json({id:'official-task-fixture'});});
+ const provider=runwayProvider({RUNWAY_GENERATION_ENABLED:'true',RUNWAYML_API_SECRET:'fixture-only',RUNWAY_CREDITS_PER_SECOND:'12'},async(url,options)=>{calls++;assert.equal(url,'https://api.dev.runwayml.com/v1/text_to_video');const body=JSON.parse(String(options?.body));assert.deepEqual(body,{model:'gen4.5',promptText:'Uma cidade ao amanhecer',duration:6,ratio:'720:1280'});assert.equal((options?.headers as Record<string,string>)['X-Runway-Version'],'2024-11-06');return Response.json({id:'official-task-fixture'});});
  assert.deepEqual(await provider.submit({prompt:'Uma cidade ao amanhecer',duration:6,ratio:'9:16'}),{id:'official-task-fixture'});assert.equal(calls,1);
  await assert.rejects(()=>provider.submit({prompt:'x',duration:11,ratio:'9:16'}));assert.equal(calls,1);
- let failedCalls=0;const failing=runwayProvider({RUNWAYML_API_SECRET:'fixture-only',RUNWAY_CREDITS_PER_SECOND:'12'},async()=>{failedCalls++;throw new Error('simulated network timeout')});
+ let failedCalls=0;const failing=runwayProvider({RUNWAY_GENERATION_ENABLED:'true',RUNWAYML_API_SECRET:'fixture-only',RUNWAY_CREDITS_PER_SECOND:'12'},async()=>{failedCalls++;throw new Error('simulated network timeout')});
  await assert.rejects(()=>failing.submit({prompt:'x',duration:6,ratio:'16:9'}),e=>e instanceof ProviderError&&e.ambiguous);assert.equal(failedCalls,1);
  assert.equal(runwayProvider({}).configured,false);
 });
@@ -46,5 +46,20 @@ test('envio incerto permanece reservado após reinício e não gera nova cobran�
  const job=(await app.inject({method:'POST',url:'/api/video/jobs',headers:auth,payload:{quoteId:quote.id,confirmed:true}})).json();assert.equal(job.status,'UNKNOWN');assert.equal(calls,1);
  await app.close();app=await createApp(dir,provider);
  assert.equal((await app.inject({url:'/api/video/jobs',headers:auth})).json()[0].status,'UNKNOWN');const q2=await estimate();assert.equal((await app.inject({method:'POST',url:'/api/video/jobs',headers:auth,payload:{quoteId:q2.id,confirmed:true}})).statusCode,409);assert.equal(calls,1);
+ }finally{await app.close();rmSync(dir,{recursive:true,force:true})}
+});
+test('teto financeiro bloqueia antes do envio e importações maliciosas ou inválidas não deixam mídia',async()=>{
+ const dir=mkdtempSync(join(tmpdir(),'nexocena-import-'));let sends=0,downloads=0;
+ const provider:VideoProvider={configured:true,creditsPerSecond:12,async submit(){sends++;return {id:'fixture-import'}},async retrieve(){return {id:'fixture-import',status:'SUCCEEDED',output:['https://cdn.example.com/video.mp4']}}};
+ const env={NODE_ENV:'test',ACCESS_MODE:'multiuser',REGISTRATION_ENABLED:'true',RUNWAY_DAILY_CREDIT_LIMIT:'1',RUNWAY_OUTPUT_HOSTS:'cdn.example.com'};
+ const downloader={resolve:async()=>[{address:'1.1.1.1',family:4}],request:async(_url:unknown,options?:RequestInit)=>{downloads++;assert.equal(options?.redirect,'error');return new Response('not a video',{status:200})}};
+ let app=await createApp(dir,provider,env,downloader);try{
+ const headers={'x-nexocena':'1'};const reg=await app.inject({method:'POST',url:'/api/auth/register',headers,payload:{email:'import@example.com',password:'fixture-password-long'}});const auth={...headers,cookie:`session=${reg.cookies[0].value}`};const scene={id:crypto.randomUUID(),title:'Teste',prompt:'Luz',duration:4,approved:false};const p=(await app.inject({method:'POST',url:'/api/projects',headers:auth,payload:{name:'Importação',scenes:[scene]}})).json();const q=(await app.inject({method:'POST',url:'/api/video/quotes',headers:auth,payload:{projectId:p.id,sceneId:scene.id}})).json();
+ assert.equal((await app.inject({method:'POST',url:'/api/video/jobs',headers:auth,payload:{quoteId:q.id,confirmed:true}})).statusCode,409);assert.equal(sends,0);
+ await app.close();app=await createApp(dir,provider,{...env,RUNWAY_DAILY_CREDIT_LIMIT:'1000'},downloader);
+ const job=(await app.inject({method:'POST',url:'/api/video/jobs',headers:auth,payload:{quoteId:q.id,confirmed:true}})).json();await app.inject({url:`/api/video/jobs/${job.id}`,headers:auth});
+ const failed=await app.inject({method:'POST',url:`/api/video/jobs/${job.id}/import`,headers:auth,payload:{}});assert.equal(failed.statusCode,502);assert.equal(downloads,1);assert.deepEqual((await app.inject({url:'/api/media',headers:auth})).json(),[]);
+ const {readdirSync}=await import('node:fs');assert.deepEqual(readdirSync(join(dir,'media')),[]);
+ await app.close();app=await createApp(dir,provider,{...env,RUNWAY_DAILY_CREDIT_LIMIT:'1000',RUNWAY_OUTPUT_HOSTS:'other.example.com'},downloader);assert.equal((await app.inject({method:'POST',url:`/api/video/jobs/${job.id}/import`,headers:auth,payload:{}})).statusCode,503);assert.equal(downloads,1);assert.equal(sends,1);
  }finally{await app.close();rmSync(dir,{recursive:true,force:true})}
 });

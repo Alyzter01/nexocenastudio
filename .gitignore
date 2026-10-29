@@ -16,3 +16,9 @@ test-results/
 *.keystore
 *.pem
 *.key
+
+# Dados e backups privados
+.backups/
+*.sqlite
+*.sqlite-wal
+*.sqlite-shm

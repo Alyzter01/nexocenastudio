@@ -30,3 +30,7 @@ Os testes de vídeo são explicitamente simulados e não fazem chamadas pagas. H
 - Recuperação de conta, preferências sincronizadas, IndexedDB, inspeção completa de uploads, backups automatizados e requisitos restantes de produção.
 
 Esta é uma implementação de desenvolvimento em evolução. Site publicado, qualidade/estabilidade da geração real e conclusão do produto não são alegados sem validação correspondente.
+
+## Auditoria de preparação privada
+
+Veja [PRODUCTION_READINESS.md](PRODUCTION_READINESS.md): modo privado, uploads e egress reforçados, teto financeiro transacional, backup/restauração, API compilada e CLI de provisionamento. Classificação: APROVADO PARA HOMOLOGAÇÃO, sem deploy ou geração paga. Os resultados anteriores nesta página não substituem o relatório da auditoria atual.
