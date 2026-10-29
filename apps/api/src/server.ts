@@ -49,6 +49,11 @@ export async function createApp(directory=process.env.DATA_DIR||'.data',provider
  return reply.setCookie('session',token,{httpOnly:true,sameSite:'lax',secure:env.NODE_ENV==='production',path:'/',maxAge:604800}).send({id:user!.id,email:normalized});
  });
  app.get('/api/me',async req=>db.one('SELECT id,email FROM users WHERE id=?',uid(req)));
+ // Google Flow credit estimates are user-entered planning values, not actual Google billing.
+ const flowLedgerSchema=z.object({balance:z.number().int().min(0).max(100000000),confirmed:z.number().int().min(0).max(100000000)}).strict();
+ app.get('/api/flow/credits',async req=>{const row=await db.one('SELECT balance,confirmed,updated_at FROM flow_credit_ledgers WHERE user_id=?',uid(req));return row?{balance:Number(row.balance),confirmed:Number(row.confirmed),updatedAt:String(row.updated_at)}:{balance:0,confirmed:0,updatedAt:''};});
+ app.put('/api/flow/credits',async req=>{const data=flowLedgerSchema.parse(req.body);const now=new Date().toISOString();await db.run('INSERT INTO flow_credit_ledgers(user_id,balance,confirmed,updated_at) VALUES(?,?,?,?) ON CONFLICT(user_id) DO UPDATE SET balance=excluded.balance,confirmed=excluded.confirmed,updated_at=excluded.updated_at',uid(req),data.balance,data.confirmed,now);return {...data,updatedAt:now};});
+
  app.get('/api/projects',async req=>(await db.all('SELECT * FROM projects WHERE user_id=? AND deleted_at IS NULL ORDER BY updated_at DESC',uid(req))).map(row=>({id:row.id,...JSON.parse(String(row.data)),revision:row.revision,updatedAt:row.updated_at})));
  async function validateProjectMedia(data:z.infer<typeof projectSchema>,userId:string,connection=db){for(const scene of data.scenes){if((scene.approved&&!scene.mediaId)||(scene.mediaId&&!await connection.one('SELECT id FROM media WHERE id=? AND user_id=?',scene.mediaId,userId)))throw Object.assign(new Error('Mídia inválida'),{statusCode:400});}}
  app.post('/api/projects',async(req,reply)=>{const data=projectSchema.parse(req.body);const id=randomUUID();await db.transaction(async tx=>{await tx.lock('media:'+uid(req));await validateProjectMedia(data,uid(req),tx);await tx.run('INSERT INTO projects(id,user_id,data,revision,updated_at) VALUES(?,?,?,?,?)',id,uid(req),JSON.stringify(data),1,new Date().toISOString());});return reply.code(201).send({id,...data,revision:1});});
