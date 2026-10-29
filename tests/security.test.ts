@@ -5,6 +5,8 @@ import {join} from 'node:path';
 import {tmpdir} from 'node:os';
 import {DatabaseSync} from 'node:sqlite';
 import {scryptSync,randomUUID} from 'node:crypto';
+import {openDatabase} from '../apps/api/src/database.js';
+import {createMediaStore} from '../apps/api/src/media-store.js';
 import {createApp} from '../apps/api/src/server.js';
 import {runwayProvider} from '../packages/ai-providers/src/runway.js';
 import {publicOutputUrl,publicAddress,matchesContainer} from '../apps/api/src/security.js';
@@ -16,8 +18,8 @@ async function register(app:Awaited<ReturnType<typeof createApp>>,email:string){
 test('modo privado: cadastro bloqueado, owner obrigatório, sessão de outro usuário negada e cookies seguros',async()=>{
  const dir=mkdtempSync(join(tmpdir(),'nexo-private-'));let app=await createApp(dir,provider(),openEnv);
  try{const owner=await register(app,'owner@example.com');const other=await register(app,'other@example.com');await app.close();
- const env={NODE_ENV:'production',ACCESS_MODE:'private',PRIVATE_OWNER_EMAIL:'owner@example.com',APP_ORIGIN:'https://studio.example.com'};
- app=await createApp(dir,provider(),env);
+ const env={NODE_ENV:'production',ACCESS_MODE:'private',PRIVATE_OWNER_EMAIL:'owner@example.com',APP_ORIGIN:'https://studio.example.com',RUNWAY_GENERATION_ENABLED:'false',RUNWAY_DAILY_CREDIT_LIMIT:'0'};
+ app=await createApp(dir,provider(),env,{database:await openDatabase(dir,openEnv),storage:await createMediaStore(dir,openEnv)});
  assert.equal((await app.inject({url:'/api/auth/config'})).json().registrationEnabled,false);
  assert.equal((await app.inject({method:'POST',url:'/api/auth/register',headers,payload:{email:'new@example.com',password}})).statusCode,403);
  assert.equal((await app.inject({url:'/api/projects',headers:owner})).statusCode,200);assert.equal((await app.inject({url:'/api/projects',headers:other})).statusCode,401);

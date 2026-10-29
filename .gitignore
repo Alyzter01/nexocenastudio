@@ -22,3 +22,5 @@ test-results/
 *.sqlite
 *.sqlite-wal
 *.sqlite-shm
+
+.vercel/

@@ -19,18 +19,24 @@
     "build:api": "tsc -p tsconfig.api.json",
     "start:api": "node dist/server/apps/api/src/index.js",
     "create:owner": "node --import tsx scripts/create-user.ts",
-    "backup": "node --import tsx scripts/backup.ts"
+    "backup": "node --import tsx scripts/backup.ts",
+    "db:migrate": "node --import tsx scripts/migrate-postgres.ts",
+    "storage:reconcile": "node --import tsx scripts/reconcile-storage.ts",
+    "build:vercel": "npm run build -w apps/web && node scripts/prepare-vercel.mjs",
+    "db:import-legacy": "node --import tsx scripts/import-legacy.ts"
   },
   "dependencies": {
     "@fastify/cookie": "^11.0.2",
     "@fastify/multipart": "^9.3.0",
     "@fastify/rate-limit": "^10.3.0",
     "fastify": "^5.12.7",
+    "pg": "^8.23.1",
     "zod": "^4.0.0"
   },
   "devDependencies": {
     "@playwright/test": "^1.64.1",
     "@types/node": "^24.0.0",
+    "@types/pg": "^8.23.1",
     "concurrently": "^9.0.0",
     "tsx": "^4.20.0",
     "typescript": "^5.9.0"

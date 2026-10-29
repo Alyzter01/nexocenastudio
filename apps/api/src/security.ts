@@ -9,7 +9,8 @@ export function accessConfig(env:NodeJS.ProcessEnv){
  const origin=env.APP_ORIGIN?new URL(env.APP_ORIGIN):null;
  if(origin&&(origin.pathname!=='/'||origin.search||origin.hash||origin.username||origin.password))throw new Error('APP_ORIGIN deve conter somente a origem');
  if(env.NODE_ENV==='production'&&(!origin||origin.protocol!=='https:'))throw new Error('APP_ORIGIN HTTPS é obrigatório em produção');
- return {mode,owner,origin:origin?.origin,registrationEnabled:mode==='multiuser'&&env.REGISTRATION_ENABLED==='true'};
+ const origins=[...(origin?[origin.origin]:[])];for(const value of (env.APP_PREVIEW_ORIGINS||'').split(',').filter(Boolean)){const o=new URL(value.trim());if(o.protocol!=='https:'||o.pathname!=='/'||o.search||o.hash||o.username||o.password)throw new Error('APP_PREVIEW_ORIGINS exige origens HTTPS exatas');origins.push(o.origin);}
+ return {mode,owner,origins,origin:origin?.origin,registrationEnabled:mode==='multiuser'&&env.REGISTRATION_ENABLED==='true'};
 }
 export function matchesContainer(bytes:Buffer,mime:string){
  const starts=(values:number[])=>values.every((v,i)=>bytes[i]===v);
