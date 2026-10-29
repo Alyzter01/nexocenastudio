@@ -1,0 +1,14 @@
+{
+  "name": "nexocena-api-experimental",
+  "main": "src/index.ts",
+  "compatibility_date": "2026-10-01",
+  "workers_dev": true,
+  "d1_databases": [
+    {
+      "binding": "DB",
+      "database_name": "nexocena-experimental",
+      "database_id": "REPLACE_WITH_EXPERIMENTAL_D1_DATABASE_ID",
+      "migrations_dir": "migrations"
+    }
+  ]
+}
