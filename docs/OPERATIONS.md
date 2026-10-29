@@ -16,7 +16,9 @@ Pare a API antes de copiar todo DATA_DIR, incluindo banco, arquivos WAL/SHM exis
 
 ## IA e processamento
 
-Não há adaptador externo implementado ou configurado. Omni/Flow indisponível; nenhuma substituição automática. A análise narrativa, custos e geração não são executados. Não foram solicitadas chaves ou cobranças. FFmpeg está disponível na máquina, mas fila/worker, isolamento de recursos e compilação MP4 ainda não estão implementados. Mídias importadas podem ser associadas e aprovadas; a montagem mostra a sequência, sem renderizar.
+A API inclui adaptador Runway Gen-4.5 com tarefas persistidas, confirmação de custo e importação privada de MP4. A configuração e os limites estão em [VIDEO.md](VIDEO.md). Sem chave/tarifa, o provedor permanece indisponível. Não houve geração paga real homologada. O site funciona com mídias importadas manualmente. FFmpeg/worker de montagem ainda não foi implementado.
+
+O produto é exclusivamente web, responsivo para celular e computador. Não há projeto Android nem build APK. O frontend pode ficar na Vercel; SQLite e disco local exigem uma API externa persistente com volume durável e encaminhamento `/api` pela mesma origem HTTPS.
 
 ## Offline
 

@@ -1,1 +1,0 @@
-{"name":"@nexocena/android","private":true,"type":"module","dependencies":{"@capacitor/core":"^8.6.0","@capacitor/android":"^8.6.0"},"devDependencies":{"@capacitor/cli":"^8.6.0"}}

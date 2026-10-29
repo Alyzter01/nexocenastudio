@@ -15,7 +15,6 @@
     "build": "npm run build -w apps/web",
     "typecheck": "tsc --noEmit && npm run typecheck -w apps/web",
     "test": "node --import tsx --test tests/*.test.ts",
-    "android:sync": "npm run build && cd apps/android && npx cap sync android",
     "test:e2e": "playwright test"
   },
   "dependencies": {

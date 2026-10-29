@@ -1,4 +1,6 @@
 import Fastify from 'fastify';
+import {registerGeneration} from './generation.js';
+import {runwayProvider,type VideoProvider} from '../../../packages/ai-providers/src/runway.js';
 import cookie from '@fastify/cookie';
 import rateLimit from '@fastify/rate-limit';
 import multipart from '@fastify/multipart';
@@ -9,7 +11,7 @@ import {join} from 'node:path';
 import {pipeline} from 'node:stream/promises';
 import {z} from 'zod';
 import {credentialsSchema,projectSchema} from '../../../packages/core/src/schema.js';
-export async function createApp(directory=process.env.DATA_DIR||'.data'){
+export async function createApp(directory=process.env.DATA_DIR||'.data',provider:VideoProvider=runwayProvider()){
  mkdirSync(directory,{recursive:true}); mkdirSync(join(directory,'media'),{recursive:true});
  const db=new DatabaseSync(join(directory,'studio.sqlite')); db.exec(`PRAGMA journal_mode=WAL; PRAGMA foreign_keys=ON;
  CREATE TABLE IF NOT EXISTS users(id TEXT PRIMARY KEY,email TEXT UNIQUE NOT NULL,password TEXT NOT NULL);
@@ -29,7 +31,7 @@ export async function createApp(directory=process.env.DATA_DIR||'.data'){
  (req as typeof req & {userId:string}).userId=String(session.user_id);
  });
  const uid=(req:unknown)=>(req as {userId:string}).userId;
- app.get('/api/health',async()=>({api:'ready',database:db.prepare('SELECT 1 AS ok').get(),storage:'local',providers:'unavailable',version:'0.1.0'}));
+ app.get('/api/health',async()=>({api:'ready',database:db.prepare('SELECT 1 AS ok').get(),storage:'local',providers:provider.configured?'configured_unverified':'unavailable',version:'0.1.0'}));
  app.post('/api/auth/:action',{config:{rateLimit:{max:10,timeWindow:'1 minute'}}},async(req,reply)=>{
  const {action}=req.params as {action:string};
  if(action==='logout'){db.prepare('DELETE FROM sessions WHERE token=?').run(hash(req.cookies.session||''));return reply.clearCookie('session',{path:'/'}).send({ok:true});}
@@ -49,5 +51,6 @@ export async function createApp(directory=process.env.DATA_DIR||'.data'){
  app.get('/api/media',async req=>db.prepare('SELECT * FROM media WHERE user_id=? ORDER BY created_at DESC').all(uid(req)));
  app.post('/api/media',async(req,reply)=>{const file=await req.file();if(!file)return reply.code(400).send({error:'Selecione um arquivo'});if(!['video/mp4','video/webm','image/png','image/jpeg','audio/mpeg','audio/wav','audio/ogg'].includes(file.mimetype)){file.file.resume();return reply.code(400).send({error:'Formato não permitido'});}const id=randomUUID();const dest=join(directory,'media',id);await pipeline(file.file,createWriteStream(dest,{flags:'wx'}));if(file.file.truncated){unlinkSync(dest);return reply.code(413).send({error:'Limite: 100 MB'});}db.prepare('INSERT INTO media VALUES(?,?,?,?,?,?)').run(id,uid(req),file.filename.slice(0,200),file.mimetype,file.file.bytesRead,new Date().toISOString());return reply.code(201).send({id});});
  app.get('/api/media/:id',async(req,reply)=>{const row=db.prepare('SELECT * FROM media WHERE id=? AND user_id=?').get((req.params as {id:string}).id,uid(req));if(!row)return reply.code(404).send({error:'Mídia não encontrada'});reply.header('X-Content-Type-Options','nosniff').header('Cache-Control','private, no-store').type(String(row.mime));return reply.send(createReadStream(join(directory,'media',String(row.id))));});
+ registerGeneration(app,db,provider,directory);
  app.addHook('onClose',async()=>db.close());return app;
 }

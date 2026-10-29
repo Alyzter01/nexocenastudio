@@ -1,38 +1,32 @@
-# Relatório técnico — 2026-10-28
+# Estado da implementação
 
-## Implementado
+## Escopo atual: somente site
 
-- Monorepo npm com API, web, Android e schemas compartilhados Zod.
-- Interface escura responsiva, navegação inferior mobile, símbolo vetorial próprio.
-- Cadastro, login/logout, sessões HttpOnly, rate limit, autorização por proprietário.
-- Projetos vazios, editor de roteiro, cenas manuais, duração, formato, aprovação.
-- AutoSave no backend, controle de revisão e rascunho local recuperável.
-- Upload persistente no disco privado, biblioteca, reprodução e download autenticado.
-- Exportação JSON e prompts; visão sequencial de montagem sem renderização.
-- Manifesto, tela offline e service worker restrito a recursos públicos mínimos.
-- Projeto Capacitor nativo e CI para APK debug com checksum.
+- Web responsiva para celular e computador, com navegação mobile e desktop.
+- Android/Capacitor/APK, dependências e build nativo removidos a pedido do usuário.
+- CI dedicado a tipos, testes de API, Playwright, build web e artifact estático.
+- Cadastro/login/logout, projetos, roteiro, cenas, AutoSave com revisão, recuperação e mídias privadas preservados.
+- Exportação JSON e prompts, biblioteca e aprovação manual.
+
+## Vídeo
+
+- Adaptador oficial Runway Gen-4.5 (2–10 segundos, horizontal/vertical, prompt até 1.000 caracteres).
+- Estimativa persistida com validade, modal de confirmação e validação de mudanças na cena/tarifa.
+- Tarefas persistentes, deduplicação, limites por usuário/cena, polling limitado, estados de falha e envio incerto.
+- Importação do resultado MP4 para biblioteca privada, com host permitido, timeout e limite de tamanho.
+- Sem chave ou tarifa no backend, geração desabilitada. Nenhuma integração Flow privada.
 
 ## Validação
 
-Consulte os resultados reais apresentados no chat. Teste de API usa banco real temporário e verifica cadastro/login, sessão, validação, autorização, isolamento, conflito e persistência após reinício. Não usa provedor pago. Não substitui teste de navegador ou dispositivo.
+Os testes de vídeo são explicitamente simulados e não fazem chamadas pagas. Há testes do contrato do adaptador, confirmação, isolamento, duplicidade, polling, reinício e envio incerto; Playwright verifica o fluxo existente e a confirmação de custo em desktop/mobile. Os resultados reais de execução são relatados no chat. Não há credenciais Runway configuradas neste ambiente; geração real e transferência real do provedor ainda não foram homologadas.
 
-## Pendente por etapa
+## Pendências
 
-1. Fundação: PostgreSQL/ORM e migrations, autenticação gerenciada com recuperação, lint/formatação e design system extraído.
-2. Produto: IndexedDB, preferências sincronizadas, histórico visível, favoritos/arquivo, upload com inspeção de conteúdo, S3, operações avançadas de cenas, testes de UI.
-3. Android: execução do workflow remoto, APK verificado, homologação dos ícones/splash próprios, plugins de arquivo/compartilhamento/ciclo de vida, homologação em dispositivo.
-4. Inteligência narrativa: adaptador oficial e respostas estruturadas. Indisponível na UI.
-5. Geração: contratos/adaptadores, fila, estimativa, confirmação e auditoria. Indisponível; sem credenciais.
-6. Pós-produção: worker FFmpeg, timeline com trims/faixas, compilação parcial/completa, SRT/VTT e backup com manifesto.
-7. Produção: OIDC/recuperação, retenção, observabilidade, monitoramento, E2E, deploy real, landing/páginas legais e download com metadados reais, assinatura release.
+- Configurar chave, saldo, acesso ao modelo, tarifa e hosts de saída Runway no backend. Homologar geração real mediante autorização de custo.
+- Hospedar frontend e API persistente com HTTPS. O backend SQLite/disco atual não é adequado às funções efêmeras da Vercel.
+- PostgreSQL/S3 e coordenação distribuída para escalar além de uma instância.
+- Reconciliação administrativa de tarefas incertas, custos efetivamente cobrados e cancelamento.
+- Análise narrativa por IA, continuidade visual, worker FFmpeg e exportação de montagem MP4.
+- Recuperação de conta, preferências sincronizadas, IndexedDB, inspeção completa de uploads, backups automatizados e requisitos restantes de produção.
 
-Esta versão é uma base funcional de desenvolvimento, não o produto completo nem uma versão homologada para produção. Não há APK, publicação, sincronização Android ou exportação MP4 verificados.
-
-## Resultados confirmados nesta instância
-
-- TypeScript: aprovado.
-- Build Vite: aprovado.
-- Teste de integração API: 1 cenário aprovado (cadastro, isolamento, revisão, restauração, login/logout).
-- Playwright/Chromium real: 1 cenário aprovado em desktop e viewport mobile (cadastro, projeto vazio, autosave, reload, restauração e fechamento intencional).
-- Requisição HTTP por Vite para /api/health: banco respondendo, provedores indisponíveis.
-- Capacitor add/sync: concluído. Build APK e instalação: não executados, SDK ausente.
+Esta é uma implementação de desenvolvimento em evolução. Site publicado, qualidade/estabilidade da geração real e conclusão do produto não são alegados sem validação correspondente.
