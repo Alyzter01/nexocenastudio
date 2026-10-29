@@ -4,7 +4,7 @@ import {mkdtempSync,rmSync} from 'node:fs';
 import {tmpdir} from 'node:os';
 import {join} from 'node:path';
 import {createApp} from '../apps/api/src/server.js';
-process.env.NODE_ENV='test';
+process.env.NODE_ENV='test';process.env.ACCESS_MODE='multiuser';process.env.REGISTRATION_ENABLED='true';process.env.RUNWAY_DAILY_CREDIT_LIMIT='1000';
 test('contas, isolamento, revisão, restauração e validação',async()=>{
  const dir=mkdtempSync(join(tmpdir(),'nexocena-'));let app=await createApp(dir);
  const headers={'x-nexocena':'1'};
