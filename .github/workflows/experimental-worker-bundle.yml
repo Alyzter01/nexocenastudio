@@ -23,7 +23,7 @@ jobs:
         run: |
           node --input-type=module -e "import('./dist/worker/nexocena-api-experimental.mjs').then(m=>{if(typeof m.default?.fetch!=='function')process.exit(1)})"
           test -s dist/worker/nexocena-api-experimental.mjs
-          sha256sum -c dist/worker/nexocena-api-experimental.mjs.sha256
+          (cd dist/worker && sha256sum -c nexocena-api-experimental.mjs.sha256)
       - uses: actions/upload-artifact@v4
         with:
           name: nexocena-worker-experimental
