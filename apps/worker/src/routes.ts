@@ -59,7 +59,9 @@ export async function route(req:Request,env:Env):Promise<Response>{
  }
  if(path==='/api/projects'&&req.method==='POST'){
   const data=await body(req);if(!data||typeof data.name!=='string'||!data.name.trim()||data.name.length>150)return error('Projeto inválido',400);
-  const {id:_id,user_id:_owner,revision:_revision,updatedAt:_updated,deleted_at:_deleted,...payload}=data;\n  if(!validProject(payload))return error('Projeto inválido',400);\n  const project=JSON.stringify(payload),id=crypto.randomUUID(),now=new Date().toISOString();
+  const {id:_id,user_id:_owner,revision:_revision,updatedAt:_updated,deleted_at:_deleted,...payload}=data;
+  if(!validProject(payload))return error('Projeto inválido',400);
+  const project=JSON.stringify(payload),id=crypto.randomUUID(),now=new Date().toISOString();
   await env.DB.prepare('INSERT INTO projects(id,user_id,data,revision,updated_at) VALUES(?,?,?,?,?)').bind(id,userId,project,1,now).run();
   return respond({id,...payload,revision:1,updatedAt:now},201);
  }
@@ -71,7 +73,9 @@ export async function route(req:Request,env:Env):Promise<Response>{
  if(match&&req.method==='PUT'){
   const data=await body(req),revision=data?.revision;
   if(!data||!digits(revision)||Number(revision)<1||typeof data.name!=='string'||!data.name.trim()||data.name.length>150)return error('Dados inválidos',400);
-  const {revision:_revision,id:_id,user_id:_owner,updatedAt:_updated,deleted_at:_deleted,...project}=data;\n  if(!validProject(project))return error('Projeto inválido',400);\n  const now=new Date().toISOString();
+  const {revision:_revision,id:_id,user_id:_owner,updatedAt:_updated,deleted_at:_deleted,...project}=data;
+  if(!validProject(project))return error('Projeto inválido',400);
+  const now=new Date().toISOString();
   const result=await env.DB.prepare('UPDATE projects SET data=?,revision=revision+1,updated_at=? WHERE id=? AND user_id=? AND deleted_at IS NULL AND revision=?').bind(JSON.stringify(project),now,match[1],userId,revision).run();
   if(!result.meta.changes)return error('Projeto inexistente ou revisão desatualizada',409);
   return respond({id:match[1],...project,revision:Number(revision)+1,updatedAt:now});
