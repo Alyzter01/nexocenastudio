@@ -71,7 +71,12 @@ try{
  assert.equal((await fetchJSON('/api/projects','POST',{name:'CSRF'},cookie,{'origin':'https://evil.example'})).status,403);
  const created=await fetchJSON('/api/projects','POST',{name:'Local runtime',ratio:'9:16',scenes:[]},cookie);
  assert.equal(created.status,201,JSON.stringify(created.data));
- assert.equal((await fetchJSON('/api/projects/'+created.data.id,'PUT',{revision:1,data:{name:'New',scenes:[]}},cookie)).status,200);
+ assert.equal(created.data.status,'draft');
+ assert.equal((await fetchJSON('/api/projects/'+created.data.id,'PUT',{revision:1,data:{name:'New',status:'completed',videoProvider:'google_flow',scenes:[]}},cookie)).status,200);
+ const history=await fetchJSON('/api/projects/history','GET',undefined,cookie);
+ assert.equal(history.status,200);
+ assert.equal(history.data.length,2);
+ assert.equal(history.data[0].status,'completed');
  assert.equal((await fetchJSON('/api/projects/'+created.data.id,'PUT',{revision:1,data:{name:'Stale',scenes:[]}},cookie)).status,409);
  assert.equal((await fetchJSON('/api/flow/credits','PUT',{balance:25,confirmed:0,revision:0},cookie)).status,200);
  assert.equal((await fetchJSON('/api/flow/credits','PUT',{balance:99,confirmed:0,revision:0},cookie)).status,409);

@@ -22,13 +22,19 @@ test('demo uses browser storage and never sends network requests',async()=>{
   const session=await demoApi('/me');
   assert.equal(session.email,'demo@nexocena.local');
   const seeded=await demoApi('/projects');
-  assert.equal(seeded.length,1);
-  assert.equal(seeded[0].ratio,'9:16');
+  assert.equal(seeded.length,0);
   const created=await demoApi('/projects',{method:'POST',body:JSON.stringify({name:'Novo roteiro',ratio:'9:16',scenes:[]})});
   assert.equal(created.revision,1);
-  assert.equal((await demoApi('/projects')).length,2);
-  const changed=await demoApi('/projects/'+created.id,{method:'PUT',body:JSON.stringify({revision:1,data:{name:'Atualizado',ratio:'9:16',scenes:[]}})});
+  assert.equal((await demoApi('/projects')).length,1);
+  assert.equal(created.status,'draft');
+  const changed=await demoApi('/projects/'+created.id,{method:'PUT',body:JSON.stringify({revision:1,data:{name:'Atualizado',ratio:'9:16',status:'in_progress',videoProvider:'google_flow',scenes:[]}})});
   assert.equal(changed.revision,2);
+  assert.equal(changed.status,'in_progress');
+  assert.equal(changed.videoProvider,'google_flow');
+  const history=await demoApi('/projects/history');
+  assert.equal(history.length,2);
+  assert.equal(history[0].status,'in_progress');
+  assert.equal(history[1].event,'created');
   await assert.rejects(demoApi('/projects/'+created.id,{method:'PUT',body:JSON.stringify({revision:1,data:{name:'Antigo',scenes:[]}})}),/Conflito/);
   const balance=await demoApi('/flow/credits');
   assert.equal(balance.balance,120);
@@ -37,7 +43,7 @@ test('demo uses browser storage and never sends network requests',async()=>{
   assert.equal((await demoApi('/flow/credits')).balance,100);
   assert.ok(map.size>0);
   await demoApi('/projects/'+created.id,{method:'DELETE'});
-  assert.equal((await demoApi('/projects')).length,1);
+  assert.equal((await demoApi('/projects')).length,0);
   await assert.rejects(demoApi('/video/jobs'),/indisponível/);
  }finally{globalThis.fetch=oldFetch}
 });

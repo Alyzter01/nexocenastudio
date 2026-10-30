@@ -1,4 +1,4 @@
 import {z} from 'zod';
 export const sceneSchema=z.object({id:z.uuid(),title:z.string().max(200),prompt:z.string().max(10000),duration:z.number().min(1).max(300),approved:z.boolean(),mediaId:z.uuid().nullable().default(null)});
-export const projectSchema=z.object({name:z.string().trim().min(1).max(150),description:z.string().max(2000).default(''),script:z.string().max(100000).default(''),ratio:z.enum(['9:16','16:9','1:1','4:5']).default('16:9'),scenes:z.array(sceneSchema).max(500).default([]).refine(s=>new Set(s.map(x=>x.id)).size===s.length,"IDs de cenas duplicados")});
+export const projectSchema=z.object({name:z.string().trim().min(1).max(150),description:z.string().max(2000).default(''),script:z.string().max(100000).default(''),ratio:z.enum(['9:16','16:9','1:1','4:5']).default('16:9'),status:z.enum(['draft','in_progress','completed']).default('draft'),videoProvider:z.enum(['runway','google_flow']).default('runway'),scenes:z.array(sceneSchema).max(500).default([]).refine(s=>new Set(s.map(x=>x.id)).size===s.length,"IDs de cenas duplicados")});
 export const credentialsSchema=z.object({email:z.email().max(254),password:z.string().min(12).max(128)});

@@ -8,7 +8,7 @@ test('cadastro, projeto vazio, autosave, restauração e interface mobile',async
  await expect(page.getByRole('button',{name:'Estimar custo de vídeo'})).toBeDisabled();await page.setViewportSize({width:390,height:844});await expect(page.getByRole('button',{name:'Aprovar cena',exact:true})).toBeDisabled();expect(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth)).toBe(true);
  for(const viewport of [{width:320,height:640},{width:844,height:390},{width:1440,height:900}]){await page.setViewportSize(viewport);expect(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth)).toBe(true)}
  await page.screenshot({path:'test-results/studio-desktop.png',fullPage:true});
- await page.getByRole('button',{name:'Projetos',exact:true}).click();await expect(page.getByRole('heading',{name:/Boas histórias/})).toBeVisible();await page.reload();await expect(page.getByRole('heading',{name:/Boas histórias/})).toBeVisible();
+ await page.getByRole('button',{name:'Voltar aos projetos'}).click();await expect(page.getByRole('heading',{name:'Meus projetos'})).toBeVisible();await page.getByRole('button',{name:'Início',exact:true}).click();await expect(page.getByRole('heading',{name:'Comece com uma tela em branco.'})).toBeVisible();await page.reload();await expect(page.getByRole('heading',{name:'Comece com uma tela em branco.'})).toBeVisible();
 });
 test('site web: custo e confirmação explícita antes de enviar vídeo (API simulada)',async({page})=>{
  let paidRequests=0;let sceneId="";let submitted=false;
@@ -24,3 +24,30 @@ test('site web: custo e confirmação explícita antes de enviar vídeo (API sim
 });
 
 test('interface privada esconde criação de conta',async({page})=>{await page.route('**/api/auth/config',r=>r.fulfill({json:{private:true,registrationEnabled:false}}));await page.goto('/');await expect(page.getByRole('button',{name:'Entrar no studio'})).toBeVisible();await expect(page.getByRole('button',{name:'Ainda não tenho uma conta'})).toHaveCount(0);await expect(page.getByText('Acesso privado. Solicite ao proprietário sua conta.')).toBeVisible();});
+
+test('organização: rascunho, andamento, finalizado, histórico e segundo provedor',async({page})=>{
+ await page.goto('/');await page.getByRole('button',{name:'Ainda não tenho uma conta'}).click();
+ await page.getByLabel('E-mail').fill('organize-'+crypto.randomUUID()+'@example.com');
+ await page.getByLabel('Senha',{exact:true}).fill('strong-browser-password');
+ await page.getByRole('button',{name:'Criar conta',exact:true}).click();
+ await expect(page.getByRole('heading',{name:'Comece com uma tela em branco.'})).toBeVisible();
+ await page.getByRole('button',{name:'Novo projeto',exact:true}).click();
+ await page.getByLabel('Nome do projeto').fill('Filme da organização');
+ await page.getByRole('button',{name:'Criar projeto',exact:true}).click();
+ await expect(page.getByLabel('Status do projeto',{exact:true})).toHaveValue('draft');
+ await page.getByLabel('Provedor de vídeo').selectOption('google_flow');
+ await expect(page.getByRole('link',{name:/Abrir Google Flow/})).toBeVisible();
+ await expect(page.getByRole('button',{name:'Abrir painel'})).toBeVisible();
+ await page.getByLabel('Status do projeto',{exact:true}).selectOption('in_progress');
+ await expect(page.locator('.save-state')).toHaveText('Sincronizado');
+ await page.getByRole('button',{name:'Voltar aos projetos'}).click();
+ await page.getByRole('button',{name:/^Em andamento/}).click();
+ await expect(page.getByRole('button',{name:'Abrir projeto Filme da organização'})).toBeVisible();
+ await page.getByLabel('Status do projeto Filme da organização').selectOption('completed');
+ await page.getByRole('button',{name:/^Finalizados/}).click();
+ await expect(page.getByText('Filme da organização')).toBeVisible();
+ await page.getByRole('button',{name:'Histórico',exact:true}).click();
+ await expect(page.getByRole('heading',{name:'Histórico de projetos'})).toBeVisible();
+ await expect(page.locator('.history-item').first()).toContainText('Filme da organização');
+ await expect(page.locator('.history-item').first()).toContainText('Finalizado');
+});

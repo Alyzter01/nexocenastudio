@@ -8,7 +8,7 @@ import type {Env,D1Statement} from '../src/env';
 
 function fixture():Env{
  const db=new DatabaseSync(':memory:');
- for(const file of ['0001_initial.sql','0002_auth.sql','0003_auth_throttles.sql']){
+ for(const file of ['0001_initial.sql','0002_auth.sql','0003_auth_throttles.sql','0004_project_versions.sql']){
   db.exec(readFileSync(new URL('../migrations/'+file,import.meta.url),'utf8'));
  }
  return {EXPERIMENT_OWNER_EMAIL:'owner@example.com',EXPERIMENT_REGISTRATION:'true',DB:{
@@ -51,9 +51,14 @@ test('auth, CSRF, D1 isolation and compare-and-swap revisions',async()=>{
  assert.equal(createdResult.status,201);
  const created=await data(createdResult);
  assert.equal(created.revision,1);
+ assert.equal(created.status,'draft');
  assert.equal(created.ratio,'9:16');
- assert.equal((await call(env,'/api/projects/'+created.id,'PUT',{revision:1,data:{name:'Novo',scenes:[]}},cookie)).status,200);
+ assert.equal((await call(env,'/api/projects/'+created.id,'PUT',{revision:1,data:{name:'Novo',status:'in_progress',videoProvider:'google_flow',scenes:[]}},cookie)).status,200);
  assert.equal((await call(env,'/api/projects/'+created.id,'PUT',{revision:1,data:{name:'Antigo',scenes:[]}},cookie)).status,409);
+ const history=await data(await call(env,'/api/projects/history','GET',undefined,cookie));
+ assert.equal(history.length,2);
+ assert.equal(history[0].status,'in_progress');
+ assert.equal(history[1].event,'created');
  const scene={id:crypto.randomUUID(),title:'Cena',prompt:'',duration:6,approved:true,mediaId:null};
  assert.equal((await call(env,'/api/projects','POST',{name:'Inválido',scenes:[scene]},cookie)).status,422);
  const otherId=crypto.randomUUID(),token='a'.repeat(64);
@@ -65,6 +70,7 @@ test('auth, CSRF, D1 isolation and compare-and-swap revisions',async()=>{
  assert.equal((await call(env,'/api/projects/'+created.id,'GET',undefined,otherCookie)).status,404);
  assert.equal((await call(env,'/api/projects/'+created.id,'PUT',{revision:2,data:{name:'Exploit',scenes:[]}},otherCookie)).status,409);
  assert.deepEqual(await data(await call(env,'/api/projects','GET',undefined,otherCookie)),[]);
+ assert.deepEqual(await data(await call(env,'/api/projects/history','GET',undefined,otherCookie)),[]);
  assert.equal((await call(env,'/api/flow/credits','PUT',{balance:20,confirmed:1,revision:0},cookie)).status,200);
  assert.equal((await call(env,'/api/flow/credits','PUT',{balance:99,confirmed:0,revision:0},cookie)).status,409);
  assert.equal((await data(await call(env,'/api/flow/credits','GET',undefined,otherCookie))).balance,0);

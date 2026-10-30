@@ -78,6 +78,10 @@ export async function route(req:Request,env:Env):Promise<Response>{
   return row?respond(row):error('Entre na sua conta',401);
  }
  if(path==='/api/media'&&req.method==='GET')return respond([]); // Media binary storage has not been migrated.
+ if(path==='/api/projects/history'&&req.method==='GET'){
+  const items=await env.DB.prepare('SELECT project_id,revision,name,status,event,created_at FROM project_versions WHERE user_id=? ORDER BY created_at DESC,revision DESC LIMIT 100').bind(userId).all<{project_id:string;revision:number;name:string;status:string;event:string;created_at:string}>();
+  return respond(items.results.map(item=>({projectId:item.project_id,projectName:item.name,revision:item.revision,status:item.status,event:item.event,createdAt:item.created_at})));
+ }
  if(path==='/api/projects'&&req.method==='GET'){
   const rows=await env.DB.prepare('SELECT id,data,revision,updated_at FROM projects WHERE user_id=? AND deleted_at IS NULL ORDER BY updated_at DESC LIMIT 200').bind(userId).all();
   return respond((rows.results||[]).map((r:any)=>({id:r.id,...JSON.parse(String(r.data)),revision:r.revision,updatedAt:r.updated_at})));
@@ -88,6 +92,8 @@ export async function route(req:Request,env:Env):Promise<Response>{
   if(payload.scenes.some(s=>s.approved||s.mediaId!==null))return error('Mídias e aprovações indisponíveis no experimento',422);
   const project=JSON.stringify(payload),id=crypto.randomUUID(),now=new Date().toISOString();
   await env.DB.prepare('INSERT INTO projects(id,user_id,data,revision,updated_at) VALUES(?,?,?,?,?)').bind(id,userId,project,1,now).run();
+  await env.DB.prepare('INSERT INTO project_versions(id,project_id,user_id,revision,name,status,event,created_at) VALUES(?,?,?,?,?,?,?,?)')
+   .bind(crypto.randomUUID(),id,userId,1,payload.name,payload.status,'created',now).run();
   return respond({id,...payload,revision:1,updatedAt:now},201);
  }
  const match=/^\/api\/projects\/([0-9a-f-]{36})$/.exec(path);
@@ -103,6 +109,7 @@ export async function route(req:Request,env:Env):Promise<Response>{
   const now=new Date().toISOString();
   const result=await env.DB.prepare('UPDATE projects SET data=?,revision=revision+1,updated_at=? WHERE id=? AND user_id=? AND deleted_at IS NULL AND revision=?').bind(JSON.stringify(project),now,match[1],userId,revision).run();
   if(!result.meta.changes)return error('Projeto inexistente ou revisão desatualizada',409);
+  await env.DB.prepare('INSERT INTO project_versions(id,project_id,user_id,revision,name,status,event,created_at) VALUES(?,?,?,?,?,?,?,?)').bind(crypto.randomUUID(),match[1],userId,revision+1,project.name,project.status,'updated',now).run();
   return respond({id:match[1],...project,revision:Number(revision)+1,updatedAt:now});
  }
  if(match&&req.method==='DELETE'){
