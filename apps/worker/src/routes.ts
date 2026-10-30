@@ -8,7 +8,8 @@ async function body(req:Request):Promise<Record<string,unknown>|null>{
  try{const value:unknown=await req.json();return isObject(value)&&JSON.stringify(value).length<=200000?value:null}catch{return null}
 }
 const authInput=(v:Record<string,unknown>|null)=>v&&typeof v.email==='string'&&typeof v.password==='string'&&v.email.length<=254&&/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v.email)&&v.password.length>=12&&v.password.length<=128;
-const validProject=(v:Record<string,unknown>)=>typeof v.name==='string'&&v.name.trim().length>0&&v.name.length<=150&&JSON.stringify(v).length<=200000&&(!('scenes' in v)||(Array.isArray(v.scenes)&&v.scenes.length<=500));\nconst digits=(v:unknown)=>typeof v==='number'&&Number.isSafeInteger(v)&&v>=0&&v<=1000000000;
+const validProject=(v:Record<string,unknown>)=>typeof v.name==='string'&&v.name.trim().length>0&&v.name.length<=150&&JSON.stringify(v).length<=200000&&(!('scenes' in v)||(Array.isArray(v.scenes)&&v.scenes.length<=500));
+const digits=(v:unknown)=>typeof v==='number'&&Number.isSafeInteger(v)&&v>=0&&v<=1000000000;
 const sameOrigin=(req:Request)=>{
  const origin=req.headers.get('origin');if(origin&&origin!==new URL(req.url).origin)return false;
  const site=req.headers.get('sec-fetch-site');return !site||site==='same-origin'||site==='none';
