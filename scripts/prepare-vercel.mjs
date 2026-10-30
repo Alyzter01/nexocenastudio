@@ -1,7 +1,14 @@
 import {mkdir,cp,writeFile} from 'node:fs/promises';
 import {resolve} from 'node:path';
 import {pathToFileURL} from 'node:url';
-export async function prepareVercel(value,output='.vercel/output',source='apps/web/dist'){
+export async function prepareVercel(value,output='.vercel/output',source='apps/web/dist',previewDemo=false){
+ if(previewDemo){
+  await mkdir(output,{recursive:true});
+  await cp(source,`${output}/static`,{recursive:true});
+  const config={version:3,routes:[{handle:'filesystem'},{src:'/.*',dest:'/index.html'}]};
+  await writeFile(`${output}/config.json`,JSON.stringify(config,null,2)+'\n');
+  return config;
+ }
  if(!value)throw new Error('API_ORIGIN obrigatório: origem HTTPS real da API Render, sem segredo');
  const origin=new URL(value);
  if(origin.protocol!=='https:'||origin.username||origin.password||origin.pathname!=='/'||origin.search||origin.hash||origin.hostname==='nexocenastudio.vercel.app')throw new Error('API_ORIGIN deve ser uma origem HTTPS do backend, sem caminho ou credenciais');
