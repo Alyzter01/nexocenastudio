@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import {mkdtempSync,mkdirSync,writeFileSync,readFileSync,rmSync} from 'node:fs';
 import {tmpdir} from 'node:os';
 import {join} from 'node:path';
-import {demoApi} from '../apps/web/src/lib/demo-api';
+import {demoApi} from '../apps/web/src/lib/demo-api.js';
 import {prepareVercel} from '../scripts/prepare-vercel.mjs';
 
 test('demo uses browser storage and never sends network requests',async()=>{
