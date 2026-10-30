@@ -7,7 +7,7 @@
     {
       "binding": "DB",
       "database_name": "nexocena-experimental",
-      "database_id": "REPLACE_WITH_EXPERIMENTAL_D1_DATABASE_ID",
+      "database_id": "ba3cc04a-0892-49fc-82aa-29e4daa29836",
       "migrations_dir": "migrations"
     }
   ]
