@@ -27,7 +27,9 @@ test('PostgreSQL real isolado: owner, sessões, revisões concorrentes, restart,
  const project=(await app.inject({method:'POST',url:'/api/projects',headers:auth,payload:{name:"Filme '; DROP TABLE users; --",script:'Original'}})).json();assert.ok(project.id);
  assert.deepEqual((await app.inject({url:'/api/projects',headers:otherHeaders})).json(),[]);
  const updates=await Promise.all(['A','B'].map(script=>app.inject({method:'PUT',url:`/api/projects/${project.id}`,headers:auth,payload:{revision:1,data:{name:'Filme',script}}})));assert.deepEqual(updates.map(r=>r.statusCode).sort(),[200,409]);
- assert.equal(Number((await db.one('SELECT COUNT(*) AS n FROM versions WHERE project_id=?',project.id))!.n),1);
+ assert.equal(Number((await db.one('SELECT COUNT(*) AS n FROM versions WHERE project_id=?',project.id))!.n),2);
+ const history=(await app.inject({url:'/api/projects/history',headers:auth})).json();assert.equal(history.length>=2,true);assert.equal(history[0].revision,2);assert.equal(history[1].revision,1);
+ assert.deepEqual((await app.inject({url:'/api/projects/history',headers:otherHeaders})).json(),[]);
  await assert.rejects(()=>db.transaction(async tx=>{await tx.run('UPDATE projects SET revision=99 WHERE id=?',project.id);throw new Error('fixture rollback')}));assert.equal((await db.one('SELECT revision FROM projects WHERE id=?',project.id))!.revision,2);
  const boundary='pg-fixture';const png=Buffer.from([137,80,78,71,13,10,26,10]);const upload=(bytes:Buffer,mime:string,filename='fixture.png')=>app.inject({method:'POST',url:'/api/media',headers:{...auth,'content-type':`multipart/form-data; boundary=${boundary}`},payload:Buffer.concat([Buffer.from(`--${boundary}\r\nContent-Disposition: form-data; name="file"; filename="${filename}"\r\nContent-Type: ${mime}\r\n\r\n`),bytes,Buffer.from(`\r\n--${boundary}--\r\n`)])});
  const uploaded=await upload(png,'image/png');assert.equal(uploaded.statusCode,201);const mediaId=uploaded.json().id;assert.deepEqual((await app.inject({url:`/api/media/${mediaId}`,headers:auth})).rawPayload,png);assert.equal((await app.inject({url:`/api/media/${mediaId}`,headers:otherHeaders})).statusCode,404);
