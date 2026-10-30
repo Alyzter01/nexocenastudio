@@ -1,0 +1,33 @@
+name: Build experimental Cloudflare Worker bundle
+on:
+  push:
+    branches:
+      - experiment/cloudflare-pages-workers-d1
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  bundle:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+          cache: npm
+      - run: npm ci
+      - run: npm run typecheck:worker
+      - run: npm run test:worker
+      - run: node scripts/build-cloudflare-worker.mjs
+      - name: Verify compiled Worker exports
+        run: |
+          node --input-type=module -e "import('./dist/worker/nexocena-api-experimental.mjs').then(m=>{if(typeof m.default?.fetch!=='function')process.exit(1)})"
+          test -s dist/worker/nexocena-api-experimental.mjs
+          sha256sum -c dist/worker/nexocena-api-experimental.mjs.sha256
+      - uses: actions/upload-artifact@v4
+        with:
+          name: nexocena-worker-experimental
+          path: |
+            dist/worker/nexocena-api-experimental.mjs
+            dist/worker/nexocena-api-experimental.mjs.sha256
+          retention-days: 7
