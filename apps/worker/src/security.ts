@@ -1,4 +1,5 @@
-export interface Env { DB: D1Database; EXPERIMENT_REGISTRATION?: string; EXPERIMENT_OWNER_EMAIL?: string }
+import type {Env} from './env';
+export type {Env} from './env';
 const encoder=new TextEncoder();
 const toHex=(bytes:Uint8Array)=>Array.from(bytes,b=>b.toString(16).padStart(2,'0')).join('');
 const fromHex=(hex:string)=>new Uint8Array(hex.match(/.{2}/g)?.map(x=>parseInt(x,16))||[]);

@@ -1,16 +1,17 @@
 import {api} from '../lib/api';
-import {useEffect,useState} from 'react';
+import {useEffect,useRef,useState} from 'react';
 export const FLOW_COSTS:Record<number,number>={4:7,6:10,8:12,10:15};
 type Scene={id:string;title:string;duration:number};
-type Ledger={balance:number;confirmed:number;updatedAt:string};
-const KEY='nexocena:flow-credit-ledger:v1';
-function restore():Ledger{try{const x=JSON.parse(localStorage.getItem(KEY)||'null');if(x&&Number.isFinite(x.balance)&&x.balance>=0&&Number.isFinite(x.confirmed)&&x.confirmed>=0)return x}catch{}return {balance:0,confirmed:0,updatedAt:''}}
-export function FlowCredits({scenes}:{scenes:Scene[]}){
- const [ledger,setLedger]=useState<Ledger>(restore),[selected,setSelected]=useState<string[]>([]),[show,setShow]=useState(false),[sync,setSync]=useState('Carregando saldo do servidor');
+type Ledger={balance:number;confirmed:number;updatedAt:string;revision?:number};
+const KEY=(userKey:string)=>`nexocena:flow-credit-ledger:v2:${encodeURIComponent(userKey)}`;
+function restore(userKey:string):Ledger{try{const x=JSON.parse(localStorage.getItem(KEY(userKey))||'null');if(x&&Number.isFinite(x.balance)&&x.balance>=0&&Number.isFinite(x.confirmed)&&x.confirmed>=0)return x}catch{}return {balance:0,confirmed:0,updatedAt:''}}
+export function FlowCredits({scenes,userKey}:{scenes:Scene[];userKey:string}){
+ const [ledger,setLedger]=useState<Ledger>(()=>restore(userKey)),[selected,setSelected]=useState<string[]>([]),[show,setShow]=useState(false),[sync,setSync]=useState('Carregando saldo do servidor');
  const [loaded,setLoaded]=useState(false);
- useEffect(()=>{let alive=true;api('/flow/credits').then((remote:Ledger)=>{if(alive){setLedger(remote);setSync('Sincronizado com servidor');setLoaded(true)}}).catch(()=>{if(alive){setSync('Offline: backup local disponível');setLoaded(false)}});return()=>{alive=false}},[]);
- useEffect(()=>{localStorage.setItem(KEY,JSON.stringify(ledger))},[ledger]);
- const saveServer=async(next:Ledger)=>{if(!loaded)return;setSync('Sincronizando');try{await api('/flow/credits',{method:'PUT',body:JSON.stringify({balance:next.balance,confirmed:next.confirmed})});setSync('Sincronizado com servidor')}catch{setSync('Falha ao sincronizar; exporte um backup JSON')}};
+ const revisionRef=useRef<number|null>(null),saveQueue=useRef<Promise<void>>(Promise.resolve());
+ useEffect(()=>{let alive=true;revisionRef.current=null;setLoaded(false);api('/flow/credits').then((remote:Ledger)=>{if(alive){setLedger(remote);revisionRef.current=typeof remote.revision==='number'?remote.revision:null;setSync('Sincronizado com servidor');setLoaded(true)}}).catch(()=>{if(alive){setSync('Offline: backup local disponível');setLoaded(false)}});return()=>{alive=false}},[userKey]);
+ useEffect(()=>{localStorage.setItem(KEY(userKey),JSON.stringify(ledger))},[ledger,userKey]);
+ const saveServer=(next:Ledger)=>{if(!loaded)return;setSync('Sincronizando');saveQueue.current=saveQueue.current.catch(()=>{}).then(async()=>{try{const saved:Ledger=await api('/flow/credits',{method:'PUT',body:JSON.stringify({balance:next.balance,confirmed:next.confirmed,...(revisionRef.current===null?{}:{revision:revisionRef.current})})});if(typeof saved.revision==='number')revisionRef.current=saved.revision;setSync('Sincronizado com servidor')}catch(e){const msg=(e as Error).message.toLowerCase();setSync(msg.includes('revis')||msg.includes('alterados')?'Conflito de créditos: revise o saldo antes de sincronizar':'Falha ao sincronizar; exporte um backup JSON')}})};
  const changeLedger=(next:Ledger)=>{setLedger(next);void saveServer(next)};
  const ids=scenes.map(s=>s.id),valid=selected.filter(id=>ids.includes(id));
  const estimate=scenes.filter(s=>valid.includes(s.id)).reduce((a,s)=>a+(FLOW_COSTS[s.duration]||0),0);
