@@ -2,7 +2,7 @@
  * Offline-only, synthetic visual preview. Never sends requests to a server.
  * All content stays in this browser's localStorage; no real authentication.
  */
-import {projectSchema} from '../../../../packages/core/src/schema';
+import {projectSchema} from '../../../../packages/core/src/schema.js';
 
 type Scene={id:string;title:string;prompt:string;duration:number;approved:boolean;mediaId:null};
 type Project={id:string;name:string;description:string;script:string;ratio:'9:16'|'16:9'|'1:1'|'4:5';scenes:Scene[];revision:number;updatedAt:string};
