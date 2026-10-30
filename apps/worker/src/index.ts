@@ -1,17 +1,8 @@
-/**
- * Experimental Cloudflare Worker scaffold.
- * Fail closed: no login, no mutations and no access to D1 until auth is ported.
- * Never expose this as a production API or attach the existing frontend.
- */
-interface Env { DB: D1Database }
-const json=(data:unknown,status=200)=>new Response(JSON.stringify(data),{
- status,headers:{'content-type':'application/json; charset=utf-8','cache-control':'no-store','x-content-type-options':'nosniff'}
-});
+import {route} from './routes';
+import type {Env} from './security';
 export default {
- async fetch(request:Request,_env:Env):Promise<Response>{
-  const url=new URL(request.url);
-  if(url.pathname==='/api/health' && request.method==='GET')
-   return json({api:'experimental',storage:'d1-not-connected',auth:'not-implemented',productionReady:false});
-  return json({error:'Endpoint indisponível: autenticação e autorização ainda não implementadas'},503);
+ async fetch(request:Request,env:Env):Promise<Response>{
+  try{return await route(request,env)}
+  catch(error){console.error('worker request failed',{type:error instanceof Error?error.name:'unknown'});return new Response(JSON.stringify({error:'Falha interna'}),{status:500,headers:{'content-type':'application/json','cache-control':'no-store'}})}
  }
 } satisfies ExportedHandler<Env>;
