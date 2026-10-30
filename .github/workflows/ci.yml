@@ -30,6 +30,9 @@ jobs:
       - run: npm run typecheck
       - run: npm run typecheck:worker
       - run: npm run test:worker
+      - name: Validate local Cloudflare workerd and D1 (experimental branch only)
+        if: github.ref == 'refs/heads/experiment/cloudflare-pages-workers-d1'
+        run: npm run test:workerd
       - run: node scripts/init-test-postgres.mjs
         env:
           NODE_ENV: test

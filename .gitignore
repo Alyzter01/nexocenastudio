@@ -24,3 +24,7 @@ test-results/
 *.sqlite-shm
 
 .vercel/
+
+# Cloudflare local state
+.wrangler/
+!apps/web/.env.local.example

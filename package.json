@@ -25,7 +25,8 @@
     "build:vercel": "npm run build -w apps/web && node scripts/prepare-vercel.mjs",
     "db:import-legacy": "node --import tsx scripts/import-legacy.ts",
     "typecheck:worker": "tsc --noEmit -p apps/worker/tsconfig.json",
-    "test:worker": "node --import tsx --test apps/worker/tests/*.test.ts"
+    "test:worker": "node --import tsx --test apps/worker/tests/*.test.ts",
+    "test:workerd": "node scripts/test-cloudflare-workerd.mjs"
   },
   "dependencies": {
     "@fastify/cookie": "^11.0.2",
