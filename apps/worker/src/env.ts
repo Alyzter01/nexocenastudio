@@ -10,5 +10,6 @@ export interface Env {
  DB:D1Database;
  EXPERIMENT_REGISTRATION?:string;
  EXPERIMENT_OWNER_EMAIL?:string;
+ EXPERIMENT_SETUP_TOKEN_HASH?:string;
  EXPERIMENT_REMOTE_ENABLED?:string;
 }

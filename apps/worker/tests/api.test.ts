@@ -6,12 +6,14 @@ import {route} from '../src/routes';
 import {sha256} from '../src/security';
 import type {Env,D1Statement} from '../src/env';
 
+const setupToken='a'.repeat(64);
+const setupHash='ffe054fe7ae0cb6dc65c3af9b61d5209f439851db43d0ba5997337df154668eb'; // SHA-256 of 64 lowercase a characters
 function fixture():Env{
  const db=new DatabaseSync(':memory:');
  for(const file of ['0001_initial.sql','0002_auth.sql','0003_auth_throttles.sql','0004_project_versions.sql']){
   db.exec(readFileSync(new URL('../migrations/'+file,import.meta.url),'utf8'));
  }
- return {EXPERIMENT_OWNER_EMAIL:'owner@example.com',EXPERIMENT_REGISTRATION:'true',DB:{
+ return {EXPERIMENT_OWNER_EMAIL:'owner@example.com',EXPERIMENT_REGISTRATION:'true',EXPERIMENT_SETUP_TOKEN_HASH:setupHash,DB:{
   prepare(sql:string):D1Statement{
    const stmt=db.prepare(sql);let args:(string|number|null)[]=[];
    const bound:D1Statement={
@@ -40,7 +42,8 @@ test('all remote API routes fail closed unless explicitly enabled',async()=>{
 test('auth, CSRF, D1 isolation and compare-and-swap revisions',async()=>{
  const env=fixture();
  assert.equal((await call(env,'/api/projects')).status,401);
- const registration=await call(env,'/api/auth/register','POST',{email:'owner@example.com',password});
+ assert.equal((await call(env,'/api/auth/register','POST',{email:'owner@example.com',password})).status,403);
+ const registration=await call(env,'/api/auth/register','POST',{email:'owner@example.com',password},'',{'x-nexocena-setup':setupToken});
  assert.equal(registration.status,201);
  const cookie=(registration.headers.get('set-cookie')||'').split(';')[0];
  assert.match(cookie,/^session=[0-9a-f]{64}$/);

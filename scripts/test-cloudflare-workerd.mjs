@@ -58,7 +58,8 @@ try{
  assert.equal((await fetchJSON('/api/projects')).status,401);
  const password='Local-test-password-1234',email='owner@example.com';
  const started=performance.now();
- const registration=await fetchJSON('/api/auth/register','POST',{email,password});
+ assert.equal((await fetchJSON('/api/auth/register','POST',{email,password})).status,403);
+ const registration=await fetchJSON('/api/auth/register','POST',{email,password},'',{'x-nexocena-setup':'a'.repeat(64)});
  const registrationMs=Math.round(performance.now()-started);
  assert.equal(registration.status,201,JSON.stringify(registration.data));
  const cookie=registration.cookie?.split(';')[0]||'';

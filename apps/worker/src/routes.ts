@@ -40,9 +40,11 @@ export async function route(req:Request,env:Env):Promise<Response>{
  if(!['GET','POST','PUT','DELETE'].includes(req.method))return error('Método não autorizado',405);
  if(!sameOrigin(req))return error('Origem não autorizada',403);
  if(req.method!=='GET'&&req.headers.get('x-nexocena')!=='1')return error('Cabeçalho de segurança ausente',403);
- if(path==='/api/auth/config'&&req.method==='GET')return respond({registrationEnabled:env.EXPERIMENT_REGISTRATION==='true',private:true,experimental:true});
+ if(path==='/api/auth/config'&&req.method==='GET')return respond({registrationEnabled:env.EXPERIMENT_REGISTRATION==='true'&&!!env.EXPERIMENT_SETUP_TOKEN_HASH,private:true,experimental:true});
  if(path==='/api/auth/register'&&req.method==='POST'){
-  if(env.EXPERIMENT_REGISTRATION!=='true'||!env.EXPERIMENT_OWNER_EMAIL)return error('Cadastro indisponível',403);
+  if(env.EXPERIMENT_REGISTRATION!=='true'||!env.EXPERIMENT_OWNER_EMAIL||!env.EXPERIMENT_SETUP_TOKEN_HASH)return error('Cadastro indisponível',403);
+  const setupToken=req.headers.get('x-nexocena-setup')||'';
+  if(!/^[0-9a-f]{64}$/.test(setupToken)||!constantTimeEqual(await sha256(setupToken),env.EXPERIMENT_SETUP_TOKEN_HASH))return error('Convite de cadastro inválido',403);
   const data=await body(req);if(!authInput(data))return error('Dados inválidos',400);
   const email=String(data.email).trim().toLowerCase();
   if(email!==env.EXPERIMENT_OWNER_EMAIL.toLowerCase())return error('Cadastro não autorizado',403);

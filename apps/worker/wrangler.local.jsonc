@@ -6,6 +6,7 @@
   "vars": {
     "EXPERIMENT_REGISTRATION": "true",
     "EXPERIMENT_OWNER_EMAIL": "owner@example.com",
+    "EXPERIMENT_SETUP_TOKEN_HASH": "ffe054fe7ae0cb6dc65c3af9b61d5209f439851db43d0ba5997337df154668eb",
     "EXPERIMENT_REMOTE_ENABLED": "false"
   },
   "d1_databases": [
